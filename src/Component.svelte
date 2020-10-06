@@ -6,6 +6,9 @@
 <script>
     // import * as pdfjs from 'pdfjs-dist';
     import pdfjs from "@bundled-es-modules/pdfjs-dist/build/pdf";
+    import { createEventDispatcher } from 'svelte';
+
+    const dispatch = createEventDispatcher();
 
     pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.2.228/build/pdf.worker.min.js";
 
@@ -23,16 +26,16 @@
         theme: 'dark',
         pdfjs: {}
     };
-    
+
     $: opts = {...defaultOptions, ...options};
-    
+
     let pageContainer = null;
     let doc = null;
     let numPages = 0;
     let pages = [];
 
     $: render(pdf);
-    
+
     async function render(pdf) {
         doc = null;
         pages = null;
@@ -41,6 +44,7 @@
             return;
 
         doc = await pdfjs.getDocument(pdf).promise;
+
         numPages = doc.numPages;
 
         // Load every page asynchronously
@@ -63,6 +67,8 @@
 
             return canvas;
         });
+
+        dispatch("ready");
     }
 
     $: {
@@ -84,15 +90,15 @@
     function navigateRight () {
         currentPage = Math.min(currentPage + 1, numPages);
     }
-    
+
     function getPageText(currentPage, numPages) {
         return pageNumberText(currentPage, numPages);
     }
-    
+
     function getComponentClass() {
         return Array.from(pageContainer.classList).filter(c => c.startsWith("svelte"))[0];
     }
-    
+
     function generateClasses() {
         return Array.from(arguments).filter(a => a).join(" ");
     }
