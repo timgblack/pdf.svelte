@@ -51,14 +51,22 @@
         pages = (await Promise.all(
             Array.from(Array(numPages).keys(), pageNum => doc.getPage(pageNum + 1))
         )).map(page => {
-            let viewport = page.getViewport({ scale: 1, });
-            let canvas = document.createElement('canvas');
-
+            const canvas = document.createElement('canvas');
             canvas.classList = getComponentClass();
+
+            let viewport = page.getViewport({ scale: 1, });
+            const boundingRect = pageContainer.getBoundingClientRect();
+            const pageScale = Math.min(
+                boundingRect.width / viewport.width,
+                boundingRect.height / viewport.height,
+            );
+
+            viewport = viewport.clone({ scale: pageScale });
+
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
-            let context = canvas.getContext('2d');
+            const context = canvas.getContext('2d');
 
             page.render({
                 canvasContext: context,
