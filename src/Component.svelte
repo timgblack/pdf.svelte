@@ -119,7 +119,7 @@
 
 canvas {
     display: block;
-    margin: 0.2em;
+    margin: 0.4rem auto 0.6rem;
 }
 
 .theme-dark {
@@ -135,6 +135,8 @@ canvas {
 .viewer {
     position: relative;
     z-index: 1;
+    overflow-y: scroll;
+    height: 100%;
 }
 
 .controls {
@@ -155,11 +157,13 @@ canvas {
 </style>
 
 <div class={generateClasses("pdf-svelte", "theme-" + opts.theme, "display-" + opts.display, classes.overall)}>
-    <div class={generateClasses("controls", classes.controls)}>
-        <button on:click={navigateLeft}>Previous</button>
-        {getPageText(currentPage, numPages)}
-        <button on:click={navigateRight}>Next</button>
-    </div>
+    <slot>
+        <div class={generateClasses("controls", classes.controls)}>
+            <button on:click={navigateLeft}>Previous</button>
+            {getPageText(currentPage, numPages)}
+            <button on:click={navigateRight}>Next</button>
+        </div>
+    </slot>
     <div bind:this={pageContainer} class={generateClasses("viewer", classes.container)}>
         <canvas></canvas>
     </div>
