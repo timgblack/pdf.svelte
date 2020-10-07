@@ -1,8 +1,3 @@
-<script context="module">
-    export const DISPLAY_PAGED = "paged";
-    export const DISPLAY_ALL = "all";
-</script>
-
 <script>
     // import * as pdfjs from 'pdfjs-dist';
     import pdfjs from "@bundled-es-modules/pdfjs-dist/build/pdf";
@@ -21,7 +16,7 @@
 
     const defaultOptions = {
         // paged, all
-        display: DISPLAY_PAGED,
+        display: "paged",
         // dark, light
         theme: 'dark',
         pdfjs: {}
@@ -82,7 +77,7 @@
     $: {
         if (!pageContainer || !pages) break $;
         pageContainer.innerHTML = "";
-        if (opts.display == DISPLAY_PAGED) {
+        if (opts.display == "paged") {
             let page = pages[currentPage - 1]
             pageContainer.append(page);
         } else {
