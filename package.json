@@ -1,6 +1,6 @@
 {
   "name": "pdf.svelte",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "pdf.js in a fancy Svelte wrapper",
   "keywords": [
     "svelte",
@@ -9,7 +9,8 @@
     "pdfjs",
     "pdf.js"
   ],
-  "homepage": "https://github.com/timgblack/pdf.svelte/issues",
+  "homepage": "https://github.com/timgblack/pdf.svelte#readme",
+  "bugs": "https://github.com/timgblack/pdf.svelte/issues",
   "license": "MIT",
   "author": {
     "name": "Tim Black"
