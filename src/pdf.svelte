@@ -5,12 +5,23 @@
 
     const dispatch = createEventDispatcher();
 
-    pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.2.228/build/pdf.worker.min.js";
+    pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.worker.min.js";
+
+    function debounce(func, timeout = 500) {
+        let timer;
+        return (...args) => {
+            // Run on both leading and tailing edge
+            if (!timer) func.apply(this, args);
+            clearTimeout(timer);
+            timer = setTimeout(() => { func.apply(this, args); }, timeout);
+        };
+    }
 
     export let pdf;
     // checks "overall", "controls" and "container"
     export let classes = {};
     export let options = {};
+    export let zoom = 1;
     export let currentPage = 1;
     export let pageNumberText = (currentPage, maximumPages) => currentPage + "/" + maximumPages;
 
@@ -19,19 +30,22 @@
         display: "paged",
         // dark, light
         theme: 'dark',
-        pdfjs: {}
+        scale: 1,
+        pdfjs: {},
     };
 
-    $: opts = {...defaultOptions, ...options};
+    $: opts = {...defaultOptions, ...options}
+    $: if (zoom <= 0) zoom = 1;
 
     let pageContainer = null;
     let doc = null;
     let numPages = 0;
     let pages = [];
 
-    $: render(pdf);
+    let oldZoom = 0;
 
-    async function render(pdf) {
+    const render = debounce(async () => {
+        console.log("Rendering", pdf);
         doc = null;
         pages = null;
 
@@ -49,7 +63,7 @@
             const canvas = document.createElement('canvas');
             canvas.classList = getComponentClass();
 
-            let viewport = page.getViewport({ scale: 1, });
+            let viewport = page.getViewport({ scale: 1 / zoom, });
             const boundingRect = pageContainer.getBoundingClientRect();
             const pageScale = Math.min(
                 boundingRect.width / viewport.width,
@@ -71,11 +85,17 @@
             return canvas;
         });
 
+        oldZoom = zoom;
         dispatch("ready");
+    });
+
+    $: render(pdf);
+    $: if (zoom && oldZoom && zoom != oldZoom) {
+        render(pdf);
+        oldZoom = zoom;
     }
 
-    $: {
-        if (!pageContainer || !pages) break $;
+    $: if (pageContainer && pages) {
         pageContainer.innerHTML = "";
         if (opts.display == "paged") {
             let page = pages[currentPage - 1]
@@ -86,11 +106,11 @@
         }
     }
 
-    function navigateLeft() {
+    export const navigateLeft = () => {
         currentPage = Math.max(currentPage - 1, 1);
     }
 
-    function navigateRight () {
+    export const navigateRight = () => {
         currentPage = Math.min(currentPage + 1, numPages);
     }
 
@@ -105,6 +125,29 @@
     function generateClasses() {
         return Array.from(arguments).filter(a => a).join(" ");
     }
+
+    // Zoom
+    const zoomLevels = [0.1, 0.25, 0.5, 0.66, 0.8, 0.9, 1, 1.2, 1.5, 2, 3, 4, 5];
+    function adjustZoom(offset) {
+        const currentIndex = zoomLevels.indexOf(zoom);
+        let newLevel = currentIndex + offset;
+        if (newLevel < 0) newLevel = 0;
+        if (newLevel >= zoomLevels.length) newLevel = zoomLevels.length - 1;
+        zoom = zoomLevels[newLevel];
+    }
+
+    export function zoomIn() {
+        adjustZoom(1);
+    }
+
+    export function zoomOut() {
+        adjustZoom(-1);
+    }
+
+    const autoZoomMin = 1, autoZoomMax = 1.5;
+    function autoZoom() {
+        zoom = autoZoomMin >= zoom && zoom < autoZoomMax ? autoZoomMax : autoZoomMin;
+    }
 </script>
 
 <style>
@@ -114,17 +157,8 @@
 
 canvas {
     display: block;
-    margin: 0.4rem auto 0.6rem;
-}
-
-.theme-dark {
-    border: 5px solid grey;
-    background: darkgrey;
-}
-
-.theme-light {
-    border: 5px solid grey;
-    background: lightgrey;
+    padding: 0.4rem 0 0.6rem;
+    margin: 0 auto;
 }
 
 .viewer {
@@ -149,6 +183,16 @@ canvas {
 .display-all .controls {
     display: none;
 }
+
+.theme-dark {
+    border: 5px solid grey;
+    background: darkgrey;
+}
+
+.theme-light {
+    border: 5px solid grey;
+    background: lightgrey;
+}
 </style>
 
 <div class={generateClasses("pdf-svelte", "theme-" + opts.theme, "display-" + opts.display, classes.overall)}>
@@ -159,7 +203,7 @@ canvas {
             <button on:click={navigateRight}>Next</button>
         </div>
     </slot>
-    <div bind:this={pageContainer} class={generateClasses("viewer", classes.container)}>
+    <div bind:this={pageContainer} on:dblclick={autoZoom} class={generateClasses("viewer", classes.container)}>
         <canvas></canvas>
     </div>
 </div>
