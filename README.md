@@ -20,7 +20,7 @@ npm install pdf.svelte
   // This is passed straight to pdfjs.getDocument
   const pdf = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
 
-  // These are set on the various components
+  // These classes are set on the various elements
   const classes = {
     overall: null,
     controls: null,
@@ -34,6 +34,8 @@ npm install pdf.svelte
     theme: "dark"
   };
 
+  let zoom = 1;
+
   // The current page number
   let currentPage;
 
@@ -41,7 +43,7 @@ npm install pdf.svelte
   const pageNumberText = (currentPage, maximmPages) => currentPage + "/" + maximumPages;
 </script>
 
-<PDFViewer {pdf} {classes} {options} bind:currentPage {pageNumberText}></PDFViewer>
+<PDFViewer {pdf} {classes} {options} {zoom} bind:currentPage {pageNumberText}></PDFViewer>
 ```
 
 ## Theming
