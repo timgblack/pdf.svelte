@@ -30,7 +30,8 @@
         display: "paged",
         // dark, light
         theme: 'dark',
-        scale: 1,
+        autoZoomEnabled: false,
+        upscale: 4,
         pdfjs: {},
     };
 
@@ -45,7 +46,6 @@
     let oldZoom = 0;
 
     const render = debounce(async () => {
-        console.log("Rendering", pdf);
         doc = null;
         pages = null;
 
@@ -63,17 +63,19 @@
             const canvas = document.createElement('canvas');
             canvas.classList = getComponentClass();
 
-            let viewport = page.getViewport({ scale: 1 / zoom, });
+            let viewport = page.getViewport({ scale: 1 });
+
             const boundingRect = pageContainer.getBoundingClientRect();
             const pageScale = Math.min(
                 boundingRect.width / viewport.width,
                 boundingRect.height / viewport.height,
             );
 
-            viewport = viewport.clone({ scale: pageScale });
+            viewport = viewport.clone({ scale: pageScale * opts.upscale / zoom });
 
             canvas.height = viewport.height;
             canvas.width = viewport.width;
+            canvas.style = `height: ${viewport.height / opts.upscale}px; width: ${viewport.width / opts.upscale}px;`;
 
             const context = canvas.getContext('2d');
 
@@ -146,7 +148,8 @@
 
     const autoZoomMin = 1, autoZoomMax = 1.5;
     function autoZoom() {
-        zoom = autoZoomMin >= zoom && zoom < autoZoomMax ? autoZoomMax : autoZoomMin;
+        if (config.autoZoomEnabled)
+            zoom = autoZoomMin >= zoom && zoom < autoZoomMax ? autoZoomMax : autoZoomMin;
     }
 </script>
 

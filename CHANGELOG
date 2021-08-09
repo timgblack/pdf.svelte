@@ -6,3 +6,7 @@
 
 0.2.1
 - update documentation
+
+0.3.0
+- render by default at 4x to better support native zoom
+- update documentation

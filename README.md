@@ -31,19 +31,23 @@ npm install pdf.svelte
     // "paged" or "all"
     display: "paged",
     // "dark" or "light" or your own
-    theme: "dark"
+    theme: "dark",
+    // allow double click/tap to zoom between 1 and 1.5x
+    autoZoomEnabled: false,
+    // baseline superscale resolution to render at
+    upscale: 4,
   };
 
-  let zoom = 1;
+  let zoom = 1, zoomIn, zoomOut;
 
   // The current page number
   let currentPage;
 
-  // To override the text between the forward and back buttons 
+  // To override the text between the forward and back buttons
   const pageNumberText = (currentPage, maximmPages) => currentPage + "/" + maximumPages;
 </script>
 
-<PDFViewer {pdf} {classes} {options} {zoom} bind:currentPage {pageNumberText}></PDFViewer>
+<PDFViewer {pdf} {classes} {options} {zoom} bind:zoomIn bind:zoomOut {pageNumberText} bind:currentPage></PDFViewer>
 ```
 
 ## Theming
