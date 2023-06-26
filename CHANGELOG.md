@@ -17,3 +17,6 @@
 - increase default upscaling from 4x to 8x
 - updated Svelte to most recent 3.x version
 - updated internal `debounce` to not trigger twice on initial load
+
+0.4.1
+- fix race condition when rendering before pdfjs is loaded

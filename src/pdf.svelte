@@ -53,14 +53,20 @@
 
     let oldZoom = 0;
 
-    const render = debounce(async () => {
+    const render = debounce(async (src) => {
         doc = null;
         pages = null;
 
-        if (!pdf)
+        if (!src)
             return;
 
-        doc = await pdfjs.getDocument(pdf).promise;
+        if (!pdfjs) {
+            // using the debounce behaviour to retry after pdfjs is loaded (hopefully)
+            render(src);
+            return;
+        }
+
+        doc = await pdfjs.getDocument(src).promise;
 
         numPages = doc.numPages;
 
