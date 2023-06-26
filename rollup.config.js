@@ -13,8 +13,8 @@ const name = pkg.name
 export default {
 	input: 'src/index.js',
 	output: [
-		{ file: pkg.module, 'format': 'es' },
-		{ file: pkg.main, 'format': 'umd', name }
+		{ file: pkg.module, 'format': 'es', inlineDynamicImports: true },
+		{ file: pkg.main, 'format': 'umd', name, inlineDynamicImports: true }
 	],
 	plugins: [
 		svelte({compilerOptions: {dev: !production}}),
@@ -24,5 +24,6 @@ export default {
 			dedupe: ['svelte']
 		}),
 		// production && terser()
-	]
+	],
+	external: ["pdfjs-dist"]
 };

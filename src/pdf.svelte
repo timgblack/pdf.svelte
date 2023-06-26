@@ -1,19 +1,27 @@
 <script>
-    // import * as pdfjs from 'pdfjs-dist';
-    import pdfjs from "@bundled-es-modules/pdfjs-dist/build/pdf";
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher, onMount } from 'svelte';
 
     const dispatch = createEventDispatcher();
 
-    pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.worker.min.js";
+    let pdfjs;
+    onMount(async () => {
+        pdfjs = await import("pdfjs-dist");
+        await import("pdfjs-dist/build/pdf.worker.entry");
+    });
 
     function debounce(func, timeout = 500) {
         let timer;
         return (...args) => {
-            // Run on both leading and tailing edge
-            if (!timer) func.apply(this, args);
-            clearTimeout(timer);
-            timer = setTimeout(() => { func.apply(this, args); }, timeout);
+            if (!timer) { // First call is leading edge (call immediately)
+                func.apply(this, args);
+                timer = setTimeout(() => timer = undefined, timeout);
+            } else { // Subsequent calls are trailing edge (wait until they stop)
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    func.apply(this, args);
+                    timer = undefined;
+                }, timeout);
+            }
         };
     }
 
@@ -75,7 +83,8 @@
 
             canvas.height = viewport.height;
             canvas.width = viewport.width;
-            canvas.style = `height: ${viewport.height / opts.upscale}px; width: ${viewport.width / opts.upscale}px;`;
+            canvas.style.height = `${viewport.height / opts.upscale}px`;
+            canvas.style.width = `${viewport.width / opts.upscale}px`;
 
             const context = canvas.getContext('2d');
 
