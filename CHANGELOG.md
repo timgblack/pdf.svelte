@@ -20,3 +20,6 @@
 
 0.4.1
 - fix race condition when rendering before pdfjs is loaded
+
+0.4.2
+- fix call stack error

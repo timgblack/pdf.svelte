@@ -1,6 +1,6 @@
 {
   "name": "pdf.svelte",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "pdf.js in a fancy Svelte wrapper",
   "keywords": [
     "svelte",

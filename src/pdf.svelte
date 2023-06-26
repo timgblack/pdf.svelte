@@ -13,8 +13,8 @@
         let timer;
         return (...args) => {
             if (!timer) { // First call is leading edge (call immediately)
-                func.apply(this, args);
                 timer = setTimeout(() => timer = undefined, timeout);
+                func.apply(this, args);
             } else { // Subsequent calls are trailing edge (wait until they stop)
                 clearTimeout(timer);
                 timer = setTimeout(() => {
