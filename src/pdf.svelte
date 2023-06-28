@@ -1,67 +1,112 @@
 <script>
-    import { createEventDispatcher, onMount } from 'svelte';
+    import { createEventDispatcher, onMount, tick } from 'svelte';
 
     const dispatch = createEventDispatcher();
 
+    /** @type {import("pdfjs-dist")} */
     let pdfjs;
     onMount(async () => {
         pdfjs = await import("pdfjs-dist");
+        // @ts-ignore
         await import("pdfjs-dist/build/pdf.worker.entry");
     });
 
+    /**
+     * @function
+     * @template {function(...*): void} TFunc
+     * @param {TFunc} func
+     * @param {number} timeout
+     * @returns {TFunc}
+     * @this {*}
+    */
     function debounce(func, timeout = 500) {
+        /** @type {undefined | ReturnType<setTimeout>} */
         let timer;
+        // @ts-ignore
         return (...args) => {
             if (!timer) { // First call is leading edge (call immediately)
                 timer = setTimeout(() => timer = undefined, timeout);
-                func.apply(this, args);
+                func(...args);
             } else { // Subsequent calls are trailing edge (wait until they stop)
                 clearTimeout(timer);
                 timer = setTimeout(() => {
-                    func.apply(this, args);
+                    func(...args);
                     timer = undefined;
                 }, timeout);
             }
         };
     }
 
-    export let pdf;
-    // checks "overall", "controls" and "container"
-    export let classes = {};
-    export let options = {};
-    export let zoom = 1;
-    export let currentPage = 1;
-    export let pageNumberText = (currentPage, maximumPages) => currentPage + "/" + maximumPages;
+    /** @typedef {{
+     *     display: "paged" | "all",
+     *     theme: "none" | "light" | "dark" | string,
+     *     autoZoomEnabled: boolean,
+     *     upscale: number,
+     *     fit: "horizontal" | "vertical" | "both"
+     * }} Options */
+    /** @typedef {string | URL | ArrayBuffer 
+     *     | import("pdfjs-dist/types/src/display/api").TypedArray
+     *     | import("pdfjs-dist/types/src/display/api").DocumentInitParameters
+     * } PDFSource */
 
+    /** @type {Options} */
     const defaultOptions = {
         // paged, all
         display: "paged",
-        // dark, light
+        // dark, light, none
         theme: 'dark',
         autoZoomEnabled: false,
-        upscale: 4,
-        pdfjs: {},
+        upscale: 8,
+        // horizontal, vertical, both
+        fit: "both"
     };
 
+    /** @type {PDFSource} */
+    export let pdf;
+    // checks "overall", "controls" and "container"
+    /** @type {Partial<{overall: string[], controls: string[], container: string[]}>} */
+    export let classes = {};
+    /** @type {Partial<Options>}*/
+    export let options = defaultOptions;
+    /** @type {number} */
+    export let zoom = 1;
+    /** @type {number} */
+    export let currentPage = 1;
+    /** @function
+     * @param {number} currentPage
+     * @param {number} totalPages
+     * @returns {string}
+    */
+    export let pageNumberText = (currentPage, totalPages) => `${currentPage}/${totalPages}`;
+
+    /** @type {Options} */
+    let opts;
     $: opts = {...defaultOptions, ...options}
     $: if (zoom <= 0) zoom = 1;
 
-    let pageContainer = null;
-    let doc = null;
+    /** @type {HTMLDivElement} */
+    let pageContainer;
+    /** @type {import("pdfjs-dist").PDFDocumentProxy} */
+    let doc;
+    /** @type {number} */
     let numPages = 0;
+    /** @type {HTMLCanvasElement[]} */
     let pages = [];
 
+    /** @type {number} */
     let oldZoom = 0;
 
-    const render = debounce(async (src) => {
-        doc = null;
-        pages = null;
+    /** @function
+     * @param {PDFSource} src
+     * returns {void}
+    */
+    const render = debounce(/** @function @param {PDFSource} src */ async (src) => {
 
         if (!src)
             return;
 
         if (!pdfjs) {
-            // using the debounce behaviour to retry after pdfjs is loaded (hopefully)
+            // using debounce behaviour to not infinitely loop
             render(src);
             return;
         }
@@ -69,14 +114,11 @@
         doc = await pdfjs.getDocument(src).promise;
 
         numPages = doc.numPages;
+        await tick();
 
-        // Load every page asynchronously
-        pages = (await Promise.all(
-            Array.from(Array(numPages).keys(), pageNum => doc.getPage(pageNum + 1))
-        )).map(page => {
-            const canvas = document.createElement('canvas');
-            canvas.classList = getComponentClass();
-
+        // Load every page 
+        await Promise.all(pages.map(async (canvas, pageNum) => {
+            const page = await doc.getPage(pageNum + 1);
             let viewport = page.getViewport({ scale: 1 });
 
             const boundingRect = pageContainer.getBoundingClientRect();
@@ -89,101 +131,112 @@
 
             canvas.height = viewport.height;
             canvas.width = viewport.width;
-            canvas.style.height = `${viewport.height / opts.upscale}px`;
-            canvas.style.width = `${viewport.width / opts.upscale}px`;
+            canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
 
-            const context = canvas.getContext('2d');
+            const context = /** @type {CanvasRenderingContext2D} */(canvas.getContext('2d'));
 
             page.render({
                 canvasContext: context,
                 viewport: viewport
             });
-
-            return canvas;
-        });
+        }));
 
         oldZoom = zoom;
         dispatch("ready");
     });
 
     $: render(pdf);
-    $: if (zoom && oldZoom && zoom != oldZoom) {
+    $: if (zoom  && oldZoom && zoom != oldZoom) {
         render(pdf);
         oldZoom = zoom;
     }
 
-    $: if (pageContainer && pages) {
-        pageContainer.innerHTML = "";
-        if (opts.display == "paged") {
-            let page = pages[currentPage - 1]
-            pageContainer.append(page);
-        } else {
-            currentPage = 1;
-            pages.forEach(page => pageContainer.append(page));
-        }
-    }
-
+    /** @function @description Navigate to the previous page */
     export const navigateLeft = () => {
         currentPage = Math.max(currentPage - 1, 1);
     }
 
+    /** @function @description Navigate to the next pages */
     export const navigateRight = () => {
         currentPage = Math.min(currentPage + 1, numPages);
     }
 
-    function getPageText(currentPage, numPages) {
-        return pageNumberText(currentPage, numPages);
-    }
-
-    function getComponentClass() {
-        return Array.from(pageContainer.classList).filter(c => c.startsWith("svelte"))[0];
-    }
-
-    function generateClasses() {
-        return Array.from(arguments).filter(a => a).join(" ");
-    }
-
     // Zoom
     const zoomLevels = [0.1, 0.25, 0.5, 0.66, 0.8, 0.9, 1, 1.2, 1.5, 2, 3, 4, 5];
+
+    /**
+     * @function
+     * @param {-1 | 1 | number} offset - the number of predefined zoom steps to move
+    */
     function adjustZoom(offset) {
-        const currentIndex = zoomLevels.indexOf(zoom);
-        let newLevel = currentIndex + offset;
-        if (newLevel < 0) newLevel = 0;
-        if (newLevel >= zoomLevels.length) newLevel = zoomLevels.length - 1;
+        const currentIndex = (() => {
+            let i = 0;
+            while (i < zoomLevels.length && zoomLevels[i] < zoom){
+                i++;
+            }
+            if (zoom != zoomLevels[i] && offset > 0) --i;
+            return i;
+        })();
+        const newLevel = Math.min(Math.max(currentIndex + offset, 0), zoomLevels.length - 1);
         zoom = zoomLevels[newLevel];
     }
 
+    /** @function @description Zoom in one step */
     export function zoomIn() {
         adjustZoom(1);
     }
 
+    /** @function @description Zoom out one step */
     export function zoomOut() {
         adjustZoom(-1);
     }
 
     const autoZoomMin = 1, autoZoomMax = 1.5;
     function autoZoom() {
-        if (config.autoZoomEnabled)
-            zoom = autoZoomMin >= zoom && zoom < autoZoomMax ? autoZoomMax : autoZoomMin;
+        if (opts.autoZoomEnabled) {
+            zoom = zoom < autoZoomMin || zoom >= autoZoomMax ? autoZoomMin : autoZoomMax;
+        }
     }
 </script>
 
 <style>
 .pdf-svelte {
+    --c-border: var(--border-color, var(--theme-border-color));
+    --c-background: var(--border-color, var(--theme-border-color));
     position: absolute;
-}
-
-canvas {
-    display: block;
-    padding: 0.4rem 0 0.6rem;
-    margin: 0 auto;
+    border: 2px solid var(--c-border);
+    background: var(--c-background);
 }
 
 .viewer {
     position: relative;
     z-index: 1;
-    overflow-y: scroll;
+    overflow-y: auto;
     height: 100%;
+    width: 100%;
+}
+
+.viewer canvas {
+    display: block;
+    margin: 0 auto;
+    border: 1px solid var(--c-border);
+}
+
+.fit-both .viewer canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.fit-horizontal .viewer canvas {
+    width: 100%;
+}
+
+.fit-vertical .viewer canvas {
+    height: 100%;
+}
+
+.display-paged .viewer canvas:not(.current-page) {
+    display: none;
 }
 
 .controls {
@@ -195,33 +248,34 @@ canvas {
     border-radius: 50%;
 }
 
-.controls button {
-}
-
 .display-all .controls {
     display: none;
 }
 
 .theme-dark {
-    border: 5px solid grey;
-    background: darkgrey;
+    --theme-border-color: grey;
+    --theme-background-color: darkgrey;
 }
 
 .theme-light {
-    border: 5px solid grey;
-    background: lightgrey;
+    --theme-border-color: grey;
+    --theme-background-color: lightgrey;
 }
 </style>
 
-<div class={generateClasses("pdf-svelte", "theme-" + opts.theme, "display-" + opts.display, classes.overall)}>
-    <slot>
-        <div class={generateClasses("controls", classes.controls)}>
-            <button on:click={navigateLeft}>Previous</button>
-            {getPageText(currentPage, numPages)}
-            <button on:click={navigateRight}>Next</button>
-        </div>
-    </slot>
-    <div bind:this={pageContainer} on:dblclick={autoZoom} class={generateClasses("viewer", classes.container)}>
-        <canvas></canvas>
+<div class="pdf-svelte theme-{opts.theme} display-{opts.display} fit-{opts.fit} {classes.overall?.join(" ") ?? ""}">
+    {#if numPages}
+        <slot>
+            <div class="controls {classes.controls?.join(" ") ?? ""}">
+                <button on:click={navigateLeft}>Previous</button>
+                {pageNumberText?.(currentPage, numPages)}
+                <button on:click={navigateRight}>Next</button>
+            </div>
+        </slot>
+    {/if}
+    <div bind:this={pageContainer} on:dblclick={autoZoom} class="viewer {classes.container?.join(" ") ?? ""}">
+        {#each Array.from({length: numPages}) as _, page}
+            <canvas bind:this={pages[page]} class:current-page={page === currentPage - 1} />
+        {/each}
     </div>
 </div>

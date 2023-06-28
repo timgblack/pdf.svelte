@@ -23,3 +23,9 @@
 
 0.4.2
 - fix call stack error
+
+0.5.0
+- BREAKING: let Svelte generate the canvases (canvi?)
+- BREAKING: update component styling to better reflect the size of whatever is outside
+- BREAKING: use --border-color and --background-color on the component directly instead of creating a custom theme
+- added JSDoc typing throughout

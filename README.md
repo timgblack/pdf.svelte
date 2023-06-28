@@ -16,7 +16,7 @@ npm install pdf.svelte
 <script>
   import PDFViewer from 'pdf.svelte';
 
-  // Required - either a link to the PDF, the contents wrapped in {data: YOUR DATA HERE}, or an int array
+  // Required - the URL of your PDF, {data: pdfContents}, an ArrayBuffer or TypedArray (like Uint8Array), or a pdfjs DocumentInitParameters
   // This is passed straight to pdfjs.getDocument
   const pdf = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
 
@@ -28,30 +28,58 @@ npm install pdf.svelte
   };
 
   const options = {
-    // "paged" or "all"
+    // paged - display a single page with controls
+    // all - display all pages
     display: "paged",
-    // "dark" or "light" or your own
+    // dark - grey on darkgrey
+    // light - grey on lightgrey
+    // your own theme name - whatever you like
     theme: "dark",
     // allow double click/tap to zoom between 1 and 1.5x
     autoZoomEnabled: false,
-    // baseline superscale resolution to render at
-    upscale: 4,
+    // baseline superscale resolution to render
+    // larger means better zoom, but slower rendering
+    upscale: 8,
+    // horizontal - fit width
+    // vertical - fit height
+    // both - fit the smaller of width and height
+    fit: "both"
   };
 
+  // Control over the zoom level of the document
+  // Zoom is > 0 and represents the zoom level (1 = 100% etc)
+  // zoomIn and zoomOut move zoom through the following levels:
+  // [0.1, 0.25, 0.5, 0.66, 0.8, 0.9, 1, 1.2, 1.5, 2, 3, 4, 5]
+  // If zoom is between two levels, it will align to the nearest:
+  // zoom >= 1 and < 2 will zoom in to 1.2
+  // zoom > 1 and <= 2 will zoom out to 1
   let zoom = 1, zoomIn, zoomOut;
 
   // The current page number
   let currentPage;
 
   // To override the text between the forward and back buttons
-  const pageNumberText = (currentPage, maximmPages) => currentPage + "/" + maximumPages;
+  const pageNumberText = (currentPage, totalPages) => `${currentPage}/${totalPages}`;
+
+  // To set your own theme colours without writing your own theme
+  const borderColor = "grey";
+  const backgroundColor = "darkgrey";
 </script>
 
-<PDFViewer {pdf} {classes} {options} {zoom} bind:zoomIn bind:zoomOut {pageNumberText} bind:currentPage></PDFViewer>
+<PDFViewer {pdf} {classes} {options} {zoom} bind:zoomIn bind:zoomOut {pageNumberText} bind:currentPage --border-color={borderColor} --background-color={backgroundColor}></PDFViewer>
 ```
 
 ## Theming
-If we want to make a theme called "wacky":
+### Just Border/Background
+```javascript
+<script>
+  const borderColor = "green";
+  const backgroundColor = "red";
+</script>
+<PDFViewer --border-color={borderColor} --background-color={backgroundColor}>
+```
+### Fully Custom
+If we want to make a theme called `wacky`:
 ```javascript
 const options = {
   theme: "wacky"
@@ -61,8 +89,14 @@ const options = {
 ```css
 .pdf-svelte.theme-wacky {
   /* The main window */
-  border: 5px solid green;
-  background: red;
+  --border-color: green;
+  --background-color: red;
+  /* existing styles: */
+  position: relative;
+  z-index: 1;
+  overflow-y: auto;
+  height: 100%;
+  width: 100%;
 }
 
 .pdf-svelte.theme-wacky .viewer {
@@ -70,15 +104,17 @@ const options = {
   /* existing style: */
   position: relative;
   z-index: 1;
-  overflow-y: scroll;
+  overflow-y: auto;
   height: 100%;
+  width: 100%;
 }
 
 .pdf-svelte.theme-wacky .viewer canvas {
   /* The pdf.js canvas(es) */
   /* existing style: */
   display: block;
-  margin: 0.4rem auto 0.6rem;
+  margin: 0 auto;
+  border: 1px solid var(--border-color);
 }
 
 .pdf-svelte.theme-wacky .controls {
