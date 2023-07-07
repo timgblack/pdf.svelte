@@ -35,3 +35,6 @@
 
 0.5.2
 - set workerSrc correctly (again)
+
+0.5.3
+- set workerSrc correctly (again) (again)
