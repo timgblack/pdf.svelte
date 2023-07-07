@@ -7,8 +7,8 @@
     let pdfjs;
     onMount(async () => {
         pdfjs = await import("pdfjs-dist");
-        // @ts-ignore
-        await import("pdfjs-dist/build/pdf.worker.entry");
+        if (!pdfjs.GlobalWorkerOptions.workerSrc)
+            pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
     });
 
     /**
@@ -273,7 +273,7 @@
             </div>
         </slot>
     {/if}
-    <div bind:this={pageContainer} on:dblclick={autoZoom} class="viewer {classes.container?.join(" ") ?? ""}">
+    <div bind:this={pageContainer} on:dblclick={autoZoom} aria-hidden="true" class="viewer {classes.container?.join(" ") ?? ""}">
         {#each Array.from({length: numPages}) as _, page}
             <canvas bind:this={pages[page]} class:current-page={page === currentPage - 1} />
         {/each}

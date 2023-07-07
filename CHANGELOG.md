@@ -29,3 +29,9 @@
 - BREAKING: update component styling to better reflect the size of whatever is outside
 - BREAKING: use --border-color and --background-color on the component directly instead of creating a custom theme
 - added JSDoc typing throughout
+
+0.5.1
+- automatically set workerSrc again
+
+0.5.2
+- set workerSrc correctly (again)
