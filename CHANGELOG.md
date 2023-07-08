@@ -38,3 +38,6 @@
 
 0.5.3
 - set workerSrc correctly (again) (again)
+
+0.5.4
+- wait for pdfjs to load

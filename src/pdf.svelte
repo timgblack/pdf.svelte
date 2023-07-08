@@ -5,10 +5,15 @@
 
     /** @type {import("pdfjs-dist")} */
     let pdfjs;
+    /** @type {(value?: any) => void} */
+    let pdfjsSetLoaded;
+    /** @type {Promise<void>} */
+    let pdfjsLoaded = new Promise(r => pdfjsSetLoaded = r);
     onMount(async () => {
         pdfjs = await import("pdfjs-dist");
         if (!pdfjs.GlobalWorkerOptions.workerSrc)
             pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+        pdfjsSetLoaded();
     });
 
     /**
@@ -98,18 +103,14 @@
 
     /** @function
      * @param {PDFSource} src
-     * returns {void}
+     * @returns {void}
     */
     const render = debounce(/** @function @param {PDFSource} src */ async (src) => {
 
         if (!src)
             return;
 
-        if (!pdfjs) {
-            // using debounce behaviour to not infinitely loop
-            render(src);
-            return;
-        }
+        await pdfjsLoaded;
 
         doc = await pdfjs.getDocument(src).promise;
 
