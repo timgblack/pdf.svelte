@@ -6,14 +6,13 @@
     /** @type {import("pdfjs-dist")} */
     let pdfjs;
     /** @type {(value?: any) => void} */
-    let pdfjsSetLoaded;
+    let pdfjsIsLoaded;
     /** @type {Promise<void>} */
-    let pdfjsLoaded = new Promise(r => pdfjsSetLoaded = r);
+    let pdfjsLoaded = new Promise(r => pdfjsIsLoaded = r);
     onMount(async () => {
-        pdfjs = await import("pdfjs-dist");
-        if (!pdfjs.GlobalWorkerOptions.workerSrc)
-            pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
-        pdfjsSetLoaded();
+        pdfjs = await import("pdfjs-dist").then(m => m?.default?.__esModule ? m.default : ({...m.default, default: m.default}));
+        pdfjs.GlobalWorkerOptions.workerSrc ??= `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+        pdfjsIsLoaded();
     });
 
     /**
